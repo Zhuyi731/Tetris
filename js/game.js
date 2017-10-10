@@ -2,6 +2,11 @@ var Game = function () {
   //游戏元素
   var gameDiv;
   var nextDiv;
+  var scoreDiv;
+  var timeDiv;
+  var resultDiv;
+  //分数
+  var score = 0;
   var gameData = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -58,7 +63,7 @@ var Game = function () {
       divs.push(Div);
     }
     container.appendChild(divs2);
-  }
+  };
 
   var refresh = function (data, divs) {
     for (var i = 0; i < data.length; i++) {
@@ -72,7 +77,22 @@ var Game = function () {
         }
       }
     }
-  }
+  };
+  /**
+  * 检测数据是否合法
+  */
+  var isValid = function (pos, data) {
+    for (var i = 0; i < data.length; i++) {
+      for (var j = 0; j < data[0].length; j++) {
+        if (data[i][j] != 0) {
+          if (!check(pos, i, j)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  };
   /**
    * 清除之前的数据
    */
@@ -84,7 +104,7 @@ var Game = function () {
         }
       }
     }
-  }
+  };
   /**
    * 检测点是否合法
    */
@@ -95,21 +115,8 @@ var Game = function () {
     } else {
       return true;
     }
-  }
-  /**
-   * 检测数据是否合法
-   */
-  var isValid = function (pos, data) {
-    for (var i = 0; i < data.length; i++) {
-      for (var j = 0; j < data[0].length; j++) {
-        if (data[i][j] != 0) {
-          if (!check(pos, i, j)) { 
-            return false;
-          }
-        }
-      }
-    }
-  }
+  };
+
   /**  
    * 设置数据
    */
@@ -121,33 +128,171 @@ var Game = function () {
         }
       }
     }
-  }
-
+  };
   var down = function () {
-    if ()
+    if (cur.canDown(isValid)) {
       clearData();
-    cur.origin.x++;
-    setData();
+      cur.origin.x++;
+      setData();
+      refresh(gameData, gameDivs);
+      return true;
+    } else {
+      return false;
+    }
+  };
+  var up = function () {
+    if (cur.canRotate(isValid)) {
+      clearData();
+      cur.rotate();
+      setData();
+      refresh(gameData, gameDivs);
+    }
+  };
+  var left = function () {
+    if (cur.canLeft(isValid)) {
+      clearData();
+      cur.origin.y--;
+      setData();
+      refresh(gameData, gameDivs);
+    }
+  };
+  var right = function () {
+    if (cur.canRight(isValid)) {
+      clearData();
+      cur.origin.y++;
+      setData();
+      refresh(gameData, gameDivs);
+    }
+  };
+  var space = function () {
+    while (down()) { };
+  };
+  var fixed = function () {
+    for (var i = 0; i < cur.data.length; i++) {
+      for (var j = 0; j < cur.data[0].length; j++) {
+        if (check(cur.origin, i, j)) {
+          if (gameData[cur.origin.x + i][cur.origin.y + j] == 2) {
+            gameData[cur.origin.x + i][cur.origin.y + j] = 1;
+          }
+        }
+      }
+    }
     refresh(gameData, gameDivs);
+  }
+  //消行
+  var checkClear = function () {
+    var line = 0;//消去的行数
+    for (var i = gameData.length - 1; i >= 0; i--) {
+      var clear = true;
+      for (var j = 0; j < gameData[0].length; j++) {
+        if (gameData[i][j] != 1) {
+          clear = false;
+          break;
+        }
+      }
+      if (clear) {
+        line++;
+        for (var a = i; a > 0; a--) {
+          for (var b = 0; b < gameData[0].length; b++) {
+            gameData[a][b] = gameData[a - 1][b];
+          }
+        }
+        for (var n = 0; n < gameData[0].length; n++) {
+          gameData[0][n] = 0;
+        }
+        i++;
+      }
+    }
+    return line;
+  }
+  //检查游戏结束
+  var checkGameOver = function () {
+    var gameOver = false;
+    if (gameData[0][5] == 1 || gameData[0][4] == 1) {
+      gameOver = true;
+    }
+    return gameOver;
+  }
+  //使用下一个方块
+  var performNext = function (type, nextType) {
+    cur = next;
+    setData();
+    next = eval("square" + type);
+    next.origin = {
+      x: 0,
+      y: 3
+    };
+    refresh(gameData, gameDivs);
+    refresh(next.data, nextDivs);
+  }
+  var setTime = function (time) {
+    timeDiv.innerHTML = time;
+  }
+  /**
+   * 
+   * @param {*} line//消去的函数 
+   */
+  var addScore = function (line) {
+    var s = [0, 10, 30, 60, 100];
+    score = score + s[line];
+    scoreDiv.innerHTML = score;
+  }
+  //游戏结束
+  var gameover = function(win){
+    if(win){
+      resultDiv.innerHTML = "你赢了!";
+    }else{
+      resultDiv.innerHTML = "你输了!";
+    }
+  }
+  //底部增加行
+  var addTailLines = function(lines){
+    for(var i = 0;i<gameData.length - lines.length ; i++){
+      gameData[i] = gameData[i+lines.length];
+    }
+    for(var i = 0 ;i<lines.length ;i ++){
+      gameData[gameData.length - lines.length + i] = lines[i];
+    }
+    cur.origin.x = cur.origin.x - lines.length;
+    if(cur.origin.x < 0){
+      cur.origin.x = 0;
+    }
+    refresh(gameData,gameDivs);
   }
   /**
    * 初始化方法
    */
-  var init = function (doms) {
+  var init = function (doms, type) {
     gameDiv = doms.gameDiv;
     nextDiv = doms.nextDiv;
-    cur = new Square();
-    next = new Square();
+    timeDiv = doms.timeDiv;
+    scoreDiv = doms.scoreDiv;
+    resultDiv = doms.resultDiv;
+    cur = eval("square" + type);
+    next = eval("square" + type);
     initDiv(gameDiv, gameData, gameDivs);
     initDiv(nextDiv, next.data, nextDivs);
-    cur.origin.x = 10;
-    cur.origin.y = 5;
+    cur.origin.x = 1;
+    cur.origin.y = 3;
     setData()
     refresh(gameData, gameDivs);
     refresh(next.data, nextDivs);
-  }
+  };
   //导出API
   this.init = init;
   this.down = down;
+  this.left = left;
+  this.right = right;
+  this.up = up;
+  this.space = space;
+  this.fixed = fixed;
+  this.performNext = performNext;
+  this.checkClear = checkClear;
+  this.checkGameOver = checkGameOver;
+  this.gameData = gameData;
+  this.setTime = setTime;
+  this.addScore = addScore;
+  this.gameover = gameover;
+  this.addTailLines = addTailLines;
 }
 
